@@ -927,7 +927,7 @@ function finishObservation() {
 async function initCamera() {
   try {
     if (S.cameraStream) S.cameraStream.getTracks().forEach(t=>t.stop());
-    S.cameraStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:S.facingMode,width:{ideal:1280},height:{ideal:720}}, audio:true });
+    S.cameraStream = await navigator.mediaDevices.getUserMedia({ video:{facingMode:{exact:S.facingMode},width:{ideal:1280},height:{ideal:720}}, audio:true }).catch(()=>navigator.mediaDevices.getUserMedia({ video:{facingMode:S.facingMode,width:{ideal:1280},height:{ideal:720}}, audio:true }));
     document.getElementById('cameraVideo').srcObject = S.cameraStream;
     document.getElementById('cameraInitBtn').style.display = 'none';
     showToast('Camera ready','success');
