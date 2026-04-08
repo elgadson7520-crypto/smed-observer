@@ -967,7 +967,11 @@ function toggleVideoCapture() {
       const url = URL.createObjectURL(blob);
       S.currentStepVideos.push({ blob, url });
       renderCurrentMedia();
-      showToast('Video clip saved','success');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SMED_Step${S.stepIndex}_${Date.now()}.webm`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      showToast('Video saved to device','success');
     };
     S.mediaRecorder.start();
     setTimeout(()=>{ if (S.isRecordingVideo) toggleVideoCapture(); }, 15000);
