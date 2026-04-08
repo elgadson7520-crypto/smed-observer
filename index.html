@@ -268,6 +268,27 @@ body { font-family:'DM Sans',sans-serif; background:var(--g50); color:var(--so-b
 .spaghetti-toolbar { display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center; }
 .spaghetti-color { width:28px; height:28px; border-radius:50%; border:2px solid var(--g200); cursor:pointer; transition:all .2s; }
 .spaghetti-color:hover, .spaghetti-color.active { transform:scale(1.15); border-color:var(--so-black); }
+.spag-toolbar-row { display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; align-items:center; }
+.spag-toolbar-row select, .spag-toolbar-row input[type="text"] { font-size:12px; padding:5px 10px; border:1px solid var(--g200); border-radius:var(--radius-sm); font-family:'DM Sans',sans-serif; background:white; }
+.spag-toolbar-row select { max-width:160px; }
+.spag-toolbar-row input[type="text"] { max-width:140px; }
+.spag-mode-btn { padding:5px 12px; font-size:11px; font-weight:600; border:2px solid var(--g200); border-radius:var(--radius-sm); background:white; cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; }
+.spag-mode-btn:hover { border-color:var(--so-red); }
+.spag-mode-btn.active { background:var(--so-red); color:white; border-color:var(--so-red); }
+.spag-legend { margin-top:12px; padding:12px 16px; background:var(--g50); border-radius:var(--radius-sm); border:1px solid var(--g200); }
+.spag-legend h4 { font-size:12px; font-weight:700; margin-bottom:8px; color:var(--so-black); }
+.spag-legend-item { display:inline-flex; align-items:center; gap:6px; margin-right:16px; margin-bottom:4px; font-size:11px; color:var(--g700); }
+.spag-legend-swatch { width:14px; height:4px; border-radius:2px; }
+.spag-distance-summary { margin-top:10px; padding:12px 16px; background:white; border-radius:var(--radius-sm); border:1px solid var(--g200); }
+.spag-distance-summary h4 { font-size:12px; font-weight:700; margin-bottom:8px; color:var(--so-black); }
+.spag-dist-row { display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:12px; border-bottom:1px solid var(--g100); }
+.spag-dist-row:last-child { border-bottom:none; font-weight:700; }
+.spag-trip-log { margin-top:10px; padding:12px 16px; background:white; border-radius:var(--radius-sm); border:1px solid var(--g200); font-size:11px; color:var(--g700); line-height:1.6; }
+.spag-trip-log h4 { font-size:12px; font-weight:700; margin-bottom:6px; color:var(--so-black); }
+.spag-comparison { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+.spag-comparison canvas { width:100%; border:2px solid var(--g200); border-radius:var(--radius-sm); background:var(--g50); }
+.spag-comparison-label { font-size:11px; font-weight:700; text-align:center; margin-bottom:4px; }
+.spag-comparison-stat { text-align:center; font-size:13px; font-weight:700; padding:8px; margin-top:4px; border-radius:var(--radius-sm); }
 
 /* ═══════ MODALS ═══════ */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(4px); z-index:200; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .3s; }
@@ -619,21 +640,64 @@ body { font-family:'DM Sans',sans-serif; background:var(--g50); color:var(--so-b
       <div><h3>Spaghetti Diagram</h3><p>Sketch operator movement on the floor layout</p></div>
     </div>
     <div class="card-body">
+      <!-- Row 1: Mode buttons -->
+      <div class="spag-toolbar-row">
+        <button class="spag-mode-btn active" id="spagModeDraw" onclick="setSpagMode('draw')">✏️ Draw</button>
+        <button class="spag-mode-btn" id="spagModeStation" onclick="setSpagMode('station')">📍 Add Station</button>
+        <button class="spag-mode-btn" id="spagModeScale" onclick="setSpagMode('scale')">📏 Set Scale</button>
+        <button class="spag-mode-btn" id="spagHeatToggle" onclick="toggleSpagHeatMap()">🔥 Heat Map</button>
+      </div>
+      <!-- Row 2: Colors + actions -->
       <div class="spaghetti-toolbar">
         <div class="spaghetti-color active" style="background:#C00000" data-color="#C00000" onclick="setSpagColor(this)"></div>
         <div class="spaghetti-color" style="background:#2563eb" data-color="#2563eb" onclick="setSpagColor(this)"></div>
         <div class="spaghetti-color" style="background:#059669" data-color="#059669" onclick="setSpagColor(this)"></div>
         <div class="spaghetti-color" style="background:#d97706" data-color="#d97706" onclick="setSpagColor(this)"></div>
+        <div class="spaghetti-color" style="background:#7c3aed" data-color="#7c3aed" onclick="setSpagColor(this)"></div>
+        <div class="spaghetti-color" style="background:#0891b2" data-color="#0891b2" onclick="setSpagColor(this)"></div>
         <button class="btn btn-secondary btn-sm" onclick="clearSpaghetti()">Clear</button>
         <button class="btn btn-secondary btn-sm" onclick="undoSpaghetti()">Undo</button>
         <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
-          📷 Load Floor Plan
+          📷 Floor Plan
           <input type="file" accept="image/*" onchange="loadFloorPlan(event)" style="display:none;">
         </label>
+        <button class="btn btn-secondary btn-sm" onclick="saveSpagBefore()">💾 Save as Before</button>
+        <button class="btn btn-secondary btn-sm" id="spagCompareBtn" onclick="toggleSpagComparison()" style="display:none;">⚖️ Compare</button>
       </div>
+      <!-- Row 3: Person + Step assignment -->
+      <div class="spag-toolbar-row">
+        <select id="spagPersonSelect" onchange="S.spagActivePerson=this.value" style="min-width:130px;">
+          <option value="">— Person —</option>
+        </select>
+        <input type="text" id="spagPersonInput" placeholder="Add person..." style="min-width:120px;">
+        <button class="btn btn-secondary btn-sm" onclick="addSpagPerson()">+ Add</button>
+        <select id="spagStepSelect" onchange="S.spagActiveStep=this.value?parseInt(this.value):null" style="min-width:130px;">
+          <option value="">— Step —</option>
+        </select>
+      </div>
+      <!-- Canvas -->
       <div class="spaghetti-canvas-wrap">
         <canvas id="spaghettiCanvas" width="800" height="500"></canvas>
       </div>
+      <!-- Spaghetti Comparison (hidden by default) -->
+      <div class="spag-comparison" id="spagComparisonArea" style="display:none;">
+        <div>
+          <div class="spag-comparison-label">BEFORE</div>
+          <canvas id="spagBeforeCanvas" width="800" height="500"></canvas>
+          <div class="spag-comparison-stat" id="spagBeforeDist" style="background:var(--g100);"></div>
+        </div>
+        <div>
+          <div class="spag-comparison-label">AFTER (Current)</div>
+          <canvas id="spagAfterCanvas" width="800" height="500"></canvas>
+          <div class="spag-comparison-stat" id="spagAfterDist" style="background:var(--green-light);"></div>
+        </div>
+      </div>
+      <!-- Legend -->
+      <div class="spag-legend" id="spagLegend" style="display:none;"></div>
+      <!-- Distance Summary -->
+      <div class="spag-distance-summary" id="spagDistSummary" style="display:none;"></div>
+      <!-- Trip Log -->
+      <div class="spag-trip-log" id="spagTripLog" style="display:none;"></div>
     </div>
   </div>
 
@@ -718,6 +782,15 @@ const S = {
   spagCurrentLine: null,
   spagColor: '#C00000',
   spagBgImage: null,
+  spagScale: null,
+  spagStations: [],
+  spagBefore: null,
+  spagPersons: [],
+  spagActivePerson: '',
+  spagActiveStep: null,
+  spagMode: 'draw',
+  spagScalePoints: [],
+  spagHeatMap: false,
   dragSrcIndex: null,
   comparisonStudy: null,
   threshold: 180,
@@ -1232,20 +1305,37 @@ function buildSOP() {
 // ═══════ SPAGHETTI DIAGRAM ═══════
 function initSpaghetti() {
   const canvas = document.getElementById('spaghettiCanvas');
-  const ctx = canvas.getContext('2d');
-  // Redraw
   redrawSpaghetti();
-  // Events
+  updateSpagStepSelect();
   let drawing = false;
   canvas.onpointerdown = (e) => {
-    drawing = true;
     const r = canvas.getBoundingClientRect();
     const x = (e.clientX-r.left)*(canvas.width/r.width);
     const y = (e.clientY-r.top)*(canvas.height/r.height);
-    S.spagCurrentLine = { color:S.spagColor, points:[{x,y}] };
+    if (S.spagMode==='station') {
+      const name = prompt('Station name (e.g., Press, Tool Crib, Staging):');
+      if (name) { S.spagStations.push({x,y,name}); redrawSpaghetti(); updateSpagPanels(); showToast('Station "'+name+'" added','success'); }
+      return;
+    }
+    if (S.spagMode==='scale') {
+      S.spagScalePoints.push({x,y});
+      if (S.spagScalePoints.length===1) { showToast('Click second point for scale','info'); redrawSpaghetti(); return; }
+      if (S.spagScalePoints.length>=2) {
+        const p1=S.spagScalePoints[0], p2=S.spagScalePoints[1];
+        const pxDist = Math.sqrt((p2.x-p1.x)**2+(p2.y-p1.y)**2);
+        const realDist = parseFloat(prompt('Enter real-world distance between these two points (in feet):'));
+        if (realDist>0) { S.spagScale=pxDist/realDist; showToast('Scale set: 1 ft = '+(S.spagScale).toFixed(1)+'px','success'); }
+        S.spagScalePoints=[]; setSpagMode('draw'); redrawSpaghetti(); updateSpagPanels(); return;
+      }
+      return;
+    }
+    // Draw mode
+    drawing = true;
+    const snapped = snapToStation(x,y);
+    S.spagCurrentLine = { color:S.spagColor, points:[snapped], person:S.spagActivePerson, stepNumber:S.spagActiveStep };
   };
   canvas.onpointermove = (e) => {
-    if (!drawing) return;
+    if (!drawing||S.spagMode!=='draw') return;
     const r = canvas.getBoundingClientRect();
     const x = (e.clientX-r.left)*(canvas.width/r.width);
     const y = (e.clientY-r.top)*(canvas.height/r.height);
@@ -1253,61 +1343,281 @@ function initSpaghetti() {
     redrawSpaghetti();
   };
   canvas.onpointerup = canvas.onpointerleave = () => {
-    if (drawing && S.spagCurrentLine) {
+    if (drawing && S.spagCurrentLine && S.spagMode==='draw') {
+      // Snap endpoint to station
+      const last = S.spagCurrentLine.points[S.spagCurrentLine.points.length-1];
+      const snapped = snapToStation(last.x, last.y);
+      S.spagCurrentLine.points[S.spagCurrentLine.points.length-1] = snapped;
       S.spagLines.push(S.spagCurrentLine);
       S.spagCurrentLine = null;
+      updateSpagPanels();
     }
     drawing = false;
   };
 }
 
-function redrawSpaghetti() {
+function snapToStation(x,y) {
+  const SNAP=20;
+  for (const st of S.spagStations) {
+    if (Math.sqrt((st.x-x)**2+(st.y-y)**2)<SNAP) return {x:st.x,y:st.y,station:st.name};
+  }
+  return {x,y};
+}
+
+function setSpagMode(mode) {
+  S.spagMode=mode;
+  S.spagScalePoints=[];
+  document.querySelectorAll('.spag-mode-btn').forEach(b=>b.classList.remove('active'));
+  const id = mode==='draw'?'spagModeDraw':mode==='station'?'spagModeStation':'spagModeScale';
+  document.getElementById(id).classList.add('active');
   const canvas = document.getElementById('spaghettiCanvas');
+  canvas.style.cursor = mode==='draw'?'crosshair':mode==='station'?'cell':'copy';
+  if (mode==='scale') showToast('Click two points on the canvas to set scale','info');
+  if (mode==='station') showToast('Click on the canvas to place a station','info');
+}
+
+function toggleSpagHeatMap() {
+  S.spagHeatMap=!S.spagHeatMap;
+  document.getElementById('spagHeatToggle').classList.toggle('active', S.spagHeatMap);
+  redrawSpaghetti();
+}
+
+function calcLineDistance(line) {
+  let dist=0;
+  for (let i=1;i<line.points.length;i++) {
+    const dx=line.points[i].x-line.points[i-1].x, dy=line.points[i].y-line.points[i-1].y;
+    dist+=Math.sqrt(dx*dx+dy*dy);
+  }
+  return dist;
+}
+
+function calcLineFeet(line) {
+  const px = calcLineDistance(line);
+  return S.spagScale ? (px/S.spagScale) : null;
+}
+
+function getLineOverlapWeight(line, idx, allLines) {
+  if (!S.spagHeatMap) return 3;
+  let weight = 3;
+  const PROX = 25;
+  for (let j=0;j<idx;j++) {
+    const other = allLines[j];
+    let overlap = 0, checks = 0;
+    const step = Math.max(1, Math.floor(line.points.length/20));
+    for (let k=0;k<line.points.length;k+=step) {
+      checks++;
+      const p = line.points[k];
+      for (let m=0;m<other.points.length;m+=Math.max(1,Math.floor(other.points.length/20))) {
+        const q = other.points[m];
+        if (Math.abs(p.x-q.x)<PROX && Math.abs(p.y-q.y)<PROX) { overlap++; break; }
+      }
+    }
+    if (checks>0 && overlap/checks>0.3) weight+=2;
+  }
+  return Math.min(weight, 12);
+}
+
+function redrawSpaghetti(targetCanvas, targetLines, targetStations) {
+  const canvas = targetCanvas || document.getElementById('spaghettiCanvas');
   const ctx = canvas.getContext('2d');
+  const lines = targetLines || S.spagLines;
+  const stations = targetStations || S.spagStations;
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if (S.spagBgImage) ctx.drawImage(S.spagBgImage,0,0,canvas.width,canvas.height);
   else {
-    // Grid
-    ctx.strokeStyle = '#e4e4e7'; ctx.lineWidth = 1;
-    for (let x=0;x<canvas.width;x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
-    for (let y=0;y<canvas.height;y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+    ctx.strokeStyle='#e4e4e7'; ctx.lineWidth=1;
+    for (let x=0;x<canvas.width;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
+    for (let y=0;y<canvas.height;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
   }
-  const allLines = [...S.spagLines, ...(S.spagCurrentLine?[S.spagCurrentLine]:[])];
-  allLines.forEach(line => {
-    if (line.points.length < 2) return;
+  // Scale calibration points
+  if (S.spagMode==='scale' && S.spagScalePoints.length===1 && !targetCanvas) {
+    const p=S.spagScalePoints[0];
+    ctx.fillStyle='#C00000'; ctx.beginPath(); ctx.arc(p.x,p.y,6,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#C00000'; ctx.lineWidth=2; ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(p.x-15,p.y); ctx.lineTo(p.x+15,p.y); ctx.moveTo(p.x,p.y-15); ctx.lineTo(p.x,p.y+15); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // Draw stations
+  stations.forEach(st => {
+    ctx.fillStyle='rgba(192,0,0,0.9)'; ctx.beginPath(); ctx.arc(st.x,st.y,8,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(st.x,st.y,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.font='bold 11px DM Sans,sans-serif'; ctx.textAlign='center';
+    const tw=ctx.measureText(st.name).width;
+    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fillRect(st.x-tw/2-4, st.y-22, tw+8, 16);
+    ctx.fillStyle='rgba(0,0,0,0.85)'; ctx.fillText(st.name, st.x, st.y-10);
+    ctx.textAlign='left';
+  });
+  // Draw lines
+  const allLines = [...lines, ...(S.spagCurrentLine && !targetCanvas?[S.spagCurrentLine]:[])];
+  allLines.forEach((line,idx) => {
+    if (line.points.length<2) return;
+    const lw = getLineOverlapWeight(line, idx, allLines);
     ctx.beginPath();
-    ctx.strokeStyle = line.color;
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.strokeStyle=line.color;
+    ctx.lineWidth=lw;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    if (S.spagHeatMap) ctx.globalAlpha=0.6;
     ctx.moveTo(line.points[0].x, line.points[0].y);
-    line.points.forEach(p => ctx.lineTo(p.x, p.y));
+    line.points.forEach(p=>ctx.lineTo(p.x,p.y));
     ctx.stroke();
+    ctx.globalAlpha=1;
     // Arrow at end
-    const last = line.points[line.points.length-1];
-    const prev = line.points[Math.max(0,line.points.length-5)];
-    const angle = Math.atan2(last.y-prev.y, last.x-prev.x);
-    ctx.fillStyle = line.color;
-    ctx.beginPath();
+    const last=line.points[line.points.length-1], prev=line.points[Math.max(0,line.points.length-5)];
+    const angle=Math.atan2(last.y-prev.y, last.x-prev.x);
+    ctx.fillStyle=line.color; ctx.beginPath();
     ctx.moveTo(last.x, last.y);
-    ctx.lineTo(last.x-10*Math.cos(angle-0.4), last.y-10*Math.sin(angle-0.4));
-    ctx.lineTo(last.x-10*Math.cos(angle+0.4), last.y-10*Math.sin(angle+0.4));
+    ctx.lineTo(last.x-12*Math.cos(angle-0.4), last.y-12*Math.sin(angle-0.4));
+    ctx.lineTo(last.x-12*Math.cos(angle+0.4), last.y-12*Math.sin(angle+0.4));
     ctx.closePath(); ctx.fill();
+    // Label at start
+    const labelParts=[];
+    if (line.person) labelParts.push(line.person);
+    if (line.stepNumber) labelParts.push('S'+line.stepNumber);
+    if (labelParts.length) {
+      const label=labelParts.join(' | ');
+      const p0=line.points[0];
+      ctx.font='bold 10px DM Sans,sans-serif';
+      const tw=ctx.measureText(label).width;
+      ctx.fillStyle='rgba(0,0,0,0.75)';
+      ctx.fillRect(p0.x+8, p0.y-14, tw+8, 16);
+      ctx.fillStyle='white'; ctx.fillText(label, p0.x+12, p0.y-2);
+    }
   });
 }
 
 function setSpagColor(el) {
   document.querySelectorAll('.spaghetti-color').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  S.spagColor = el.dataset.color;
+  el.classList.add('active'); S.spagColor=el.dataset.color;
 }
-function clearSpaghetti() { S.spagLines=[]; S.spagCurrentLine=null; redrawSpaghetti(); }
-function undoSpaghetti() { S.spagLines.pop(); redrawSpaghetti(); }
+function clearSpaghetti() { S.spagLines=[]; S.spagCurrentLine=null; S.spagStations=[]; redrawSpaghetti(); updateSpagPanels(); }
+function undoSpaghetti() { S.spagLines.pop(); redrawSpaghetti(); updateSpagPanels(); }
 function loadFloorPlan(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const img = new Image();
-  img.onload = () => { S.spagBgImage=img; redrawSpaghetti(); showToast('Floor plan loaded','success'); };
-  img.src = URL.createObjectURL(file);
+  const file=e.target.files[0]; if(!file) return;
+  const img=new Image();
+  img.onload=()=>{S.spagBgImage=img; redrawSpaghetti(); showToast('Floor plan loaded','success');};
+  img.src=URL.createObjectURL(file);
+}
+
+// Person management
+function addSpagPerson() {
+  const input=document.getElementById('spagPersonInput');
+  const name=input.value.trim(); if(!name) return;
+  if (!S.spagPersons.includes(name)) S.spagPersons.push(name);
+  input.value='';
+  const sel=document.getElementById('spagPersonSelect');
+  sel.innerHTML='<option value="">— Person —</option>'+S.spagPersons.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+  sel.value=name; S.spagActivePerson=name;
+  updateSpagPanels();
+  showToast('Added: '+name,'success');
+}
+
+function updateSpagStepSelect() {
+  const sel=document.getElementById('spagStepSelect');
+  if(!sel) return;
+  sel.innerHTML='<option value="">— Step —</option>'+S.steps.map(s=>`<option value="${s.number}">Step ${s.number}: ${esc(s.description||'').substring(0,20)}</option>`).join('');
+}
+
+// Before/After
+function saveSpagBefore() {
+  S.spagBefore = { lines:JSON.parse(JSON.stringify(S.spagLines)), stations:JSON.parse(JSON.stringify(S.spagStations)), scale:S.spagScale };
+  document.getElementById('spagCompareBtn').style.display='inline-block';
+  showToast('Before state saved — draw the improved layout, then click Compare','success');
+}
+
+function toggleSpagComparison() {
+  const area=document.getElementById('spagComparisonArea');
+  if (area.style.display==='none') {
+    area.style.display='grid';
+    renderSpagComparison();
+  } else { area.style.display='none'; }
+}
+
+function renderSpagComparison() {
+  if (!S.spagBefore) return;
+  // Before canvas
+  const bc=document.getElementById('spagBeforeCanvas');
+  const beforeLines=S.spagBefore.lines.map(l=>({...l,points:l.points.map(p=>({...p}))}));
+  const beforeStations=S.spagBefore.stations.map(s=>({...s}));
+  redrawSpaghetti(bc, beforeLines, beforeStations);
+  // After canvas
+  const ac=document.getElementById('spagAfterCanvas');
+  redrawSpaghetti(ac, S.spagLines, S.spagStations);
+  // Distance comparison
+  const scale = S.spagScale || S.spagBefore.scale;
+  if (scale) {
+    const beforeDist = S.spagBefore.lines.reduce((a,l)=>a+calcLineDistance(l),0)/scale;
+    const afterDist = S.spagLines.reduce((a,l)=>a+calcLineDistance(l),0)/scale;
+    const reduction = beforeDist>0 ? ((beforeDist-afterDist)/beforeDist*100).toFixed(1) : 0;
+    document.getElementById('spagBeforeDist').innerHTML=`Total: ${beforeDist.toFixed(1)} ft`;
+    const color = afterDist<beforeDist ? 'background:var(--green-light);color:var(--green)' : 'background:#fee2e2;color:var(--so-red)';
+    document.getElementById('spagAfterDist').innerHTML=`Total: ${afterDist.toFixed(1)} ft <strong>(${afterDist<beforeDist?'↓':'↑'}${Math.abs(reduction)}%)</strong>`;
+    document.getElementById('spagAfterDist').style.cssText=color;
+  } else {
+    document.getElementById('spagBeforeDist').textContent='Set scale for distance';
+    document.getElementById('spagAfterDist').textContent='Set scale for distance';
+  }
+}
+
+// Update panels (legend, distance, trip log)
+function updateSpagPanels() {
+  updateSpagLegend();
+  updateSpagDistance();
+  updateSpagTripLog();
+}
+
+function updateSpagLegend() {
+  const el=document.getElementById('spagLegend');
+  const persons = [...new Set(S.spagLines.filter(l=>l.person).map(l=>l.person))];
+  if (!persons.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML='<h4>Legend</h4>'+persons.map(p=>{
+    const line=S.spagLines.find(l=>l.person===p);
+    const color=line?line.color:'#999';
+    const dist=S.spagLines.filter(l=>l.person===p).reduce((a,l)=>a+calcLineDistance(l),0);
+    const ft=S.spagScale?(dist/S.spagScale).toFixed(1)+' ft':'';
+    return `<div class="spag-legend-item"><div class="spag-legend-swatch" style="background:${color}"></div>${esc(p)} ${ft?'('+ft+')':''}</div>`;
+  }).join('');
+}
+
+function updateSpagDistance() {
+  const el=document.getElementById('spagDistSummary');
+  if (!S.spagScale||!S.spagLines.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  const persons=[...new Set(S.spagLines.filter(l=>l.person).map(l=>l.person))];
+  const unassigned=S.spagLines.filter(l=>!l.person);
+  let html='<h4>Distance Summary</h4>';
+  let grandTotal=0;
+  persons.forEach(p=>{
+    const dist=S.spagLines.filter(l=>l.person===p).reduce((a,l)=>a+calcLineDistance(l),0)/S.spagScale;
+    grandTotal+=dist;
+    html+=`<div class="spag-dist-row"><span>${esc(p)}</span><span>${dist.toFixed(1)} ft</span></div>`;
+  });
+  if (unassigned.length) {
+    const dist=unassigned.reduce((a,l)=>a+calcLineDistance(l),0)/S.spagScale;
+    grandTotal+=dist;
+    html+=`<div class="spag-dist-row"><span>Unassigned</span><span>${dist.toFixed(1)} ft</span></div>`;
+  }
+  html+=`<div class="spag-dist-row"><span>Total</span><span>${grandTotal.toFixed(1)} ft</span></div>`;
+  el.innerHTML=html;
+}
+
+function updateSpagTripLog() {
+  const el=document.getElementById('spagTripLog');
+  const linesWithStations=S.spagLines.filter(l=>{
+    const first=l.points[0], last=l.points[l.points.length-1];
+    return first.station||last.station;
+  });
+  if (!linesWithStations.length) { el.style.display='none'; return; }
+  el.style.display='block';
+  let html='<h4>Trip Log</h4>';
+  linesWithStations.forEach(l=>{
+    const from=l.points[0].station||'?';
+    const to=l.points[l.points.length-1].station||'?';
+    const who=l.person||'Unknown';
+    const ft=S.spagScale?(calcLineDistance(l)/S.spagScale).toFixed(1)+' ft':'';
+    html+=`<div>${esc(who)}: ${esc(from)} → ${esc(to)} ${ft?'<strong>('+ft+')</strong>':''}</div>`;
+  });
+  el.innerHTML=html;
 }
 
 // ═══════ COMPARISON ═══════
@@ -1582,6 +1892,50 @@ function downloadPDF() {
       doc.text(`Current: ${cm} min → Target: ${t} min | Reduction: ${rd} min (${rp}%)`,M+4,y+8);y+=18;
     }
     if(ai){doc.setTextColor(...B);doc.setFont('helvetica','normal');doc.setFontSize(9);const al=doc.splitTextToSize(ai,CW);al.forEach(l=>{if(y>265){doc.addPage();y=M;}doc.text(l,M,y);y+=4.5;});}
+  }
+
+  // Spaghetti Diagram
+  if (S.spagLines.length) {
+    doc.addPage(); y=M;
+    doc.setTextColor(...R);doc.setFont('helvetica','bold');doc.setFontSize(11);
+    doc.text('SPAGHETTI DIAGRAM — OPERATOR MOVEMENT',M,y);y+=2;doc.line(M,y,M+80,y);y+=8;
+    try {
+      const spagCanvas=document.getElementById('spaghettiCanvas');
+      const spagImg=spagCanvas.toDataURL('image/jpeg',0.9);
+      const cw=CW, ch=CW*(spagCanvas.height/spagCanvas.width);
+      doc.addImage(spagImg,'JPEG',M,y,cw,Math.min(ch,120));y+=Math.min(ch,120)+6;
+    } catch(e){}
+    // Station list
+    if (S.spagStations.length) {
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...B);
+      doc.text('Stations:',M,y);y+=5;
+      doc.setFont('helvetica','normal');
+      S.spagStations.forEach(st=>{doc.text('• '+st.name,M+4,y);y+=4.5;});
+      y+=3;
+    }
+    // Distance summary
+    if (S.spagScale && S.spagLines.length) {
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...B);
+      doc.text('Distance Summary:',M,y);y+=5;
+      doc.setFont('helvetica','normal');
+      const persons=[...new Set(S.spagLines.filter(l=>l.person).map(l=>l.person))];
+      let gt=0;
+      persons.forEach(p=>{
+        const d=S.spagLines.filter(l=>l.person===p).reduce((a,l)=>a+calcLineDistance(l),0)/S.spagScale;
+        gt+=d; doc.text(`${p}: ${d.toFixed(1)} ft`,M+4,y);y+=4.5;
+      });
+      const unD=S.spagLines.filter(l=>!l.person).reduce((a,l)=>a+calcLineDistance(l),0)/S.spagScale;
+      if(unD>0){gt+=unD;doc.text(`Unassigned: ${unD.toFixed(1)} ft`,M+4,y);y+=4.5;}
+      doc.setFont('helvetica','bold');doc.text(`Total Distance: ${gt.toFixed(1)} ft`,M+4,y);y+=6;
+    }
+    // Before/After comparison
+    if (S.spagBefore && S.spagScale) {
+      const bDist=S.spagBefore.lines.reduce((a,l)=>a+calcLineDistance(l),0)/S.spagScale;
+      const aDist=S.spagLines.reduce((a,l)=>a+calcLineDistance(l),0)/S.spagScale;
+      const red=bDist>0?((bDist-aDist)/bDist*100).toFixed(1):0;
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(...R);
+      doc.text(`Before: ${bDist.toFixed(1)} ft → After: ${aDist.toFixed(1)} ft | Reduction: ${Math.abs(red)}%`,M,y);y+=6;
+    }
   }
 
   // Footer
